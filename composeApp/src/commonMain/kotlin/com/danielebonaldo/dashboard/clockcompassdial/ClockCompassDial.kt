@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -265,6 +266,37 @@ fun MorphingDialCanvas(
 
         drawOuterTicks(compassDegrees, primaryTickLength * sizeRatio, center)
 
+        if (clockTextAlpha > 0f) {
+            drawClockNumbers(
+                textMeasurer = textMeasurer,
+                center = center,
+                radius = radius,
+                sizeRatio = sizeRatio,
+                alpha = clockTextAlpha
+            )
+        }
+
+        if (stopwatchTextAlpha > 0f) {
+            drawStopwatchSecondsNumbers(
+                textMeasurer = textMeasurer,
+                center = center,
+                radius = radius,
+                sizeRatio = sizeRatio,
+                alpha = stopwatchTextAlpha
+            )
+        }
+
+        if (compassTextAlpha > 0f) {
+            drawCompassLabels(
+                textMeasurer = textMeasurer,
+                center = center,
+                radius = radius,
+                alpha = compassTextAlpha,
+                sizeRatio = sizeRatio,
+                compassDegrees = compassDegrees
+            )
+        }
+
         if (stopwatchSubdialsVisibilityRatio > 0f) {
             val maxSubdialRadius = radius * StopwatchPillHeightRatio / 2
             val subdialPrimaryTickLength = primaryTickLength * 0.6f
@@ -315,37 +347,6 @@ fun MorphingDialCanvas(
                     )
                 }
             }
-        }
-
-        if (clockTextAlpha > 0f) {
-            drawClockNumbers(
-                textMeasurer = textMeasurer,
-                center = center,
-                radius = radius,
-                sizeRatio = sizeRatio,
-                alpha = clockTextAlpha
-            )
-        }
-
-        if (stopwatchTextAlpha > 0f) {
-            drawStopwatchSecondsNumbers(
-                textMeasurer = textMeasurer,
-                center = center,
-                radius = radius,
-                sizeRatio = sizeRatio,
-                alpha = stopwatchTextAlpha
-            )
-        }
-
-        if (compassTextAlpha > 0f) {
-            drawCompassLabels(
-                textMeasurer = textMeasurer,
-                center = center,
-                radius = radius,
-                alpha = compassTextAlpha,
-                sizeRatio = sizeRatio,
-                compassDegrees = compassDegrees
-            )
         }
 
         translate(left = center.x, top = center.y) {
@@ -696,38 +697,38 @@ private fun DrawScope.drawStopwatchHand(
     baseWidth: Float,
     handColor: Color
 ) {
-    // 1. Create the Path
     val path = Path().apply {
-        // Start at the very tip of the needle (pointing straight up)
-        moveTo(0f, -handLength)
-
-        // Draw down to the right side of the base
+        moveTo(-baseWidth / 2f, 0f)
+        lineTo(-baseWidth / 2f, -handLength + baseWidth / 2f)
+        arcTo(
+            rect = Rect(
+                left = -baseWidth / 2f,
+                top = -handLength,
+                right = baseWidth / 2f,
+                bottom = -handLength + baseWidth
+            ),
+            startAngleDegrees = 180f,
+            sweepAngleDegrees = 180f,
+            forceMoveTo = false
+        )
         lineTo(baseWidth / 2f, 0f)
-//
-//        // Draw down to the right side of the tail
-//        lineTo(baseWidth / 4f, tailLength)
-//
-//        // Draw across to the left side of the tail
-//        lineTo(-baseWidth / 4f, tailLength)
-
-        // Draw up to the left side of the base
-        lineTo(-baseWidth / 2f, 0f)
-
-        // Close the path back to the tip
         close()
     }
 
-    // 2. Rotate and Draw
     rotate(degrees = angleDegrees, pivot = Offset.Zero) {
         drawPath(
             path = path,
             color = handColor
         )
 
-        // Optional: Draw a tiny center pin on top of the needle
         drawCircle(
             color = handColor,
             radius = baseWidth * 1.5f,
+            center = Offset.Zero
+        )
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.4f),
+            radius = baseWidth * 0.8f,
             center = Offset.Zero
         )
     }
