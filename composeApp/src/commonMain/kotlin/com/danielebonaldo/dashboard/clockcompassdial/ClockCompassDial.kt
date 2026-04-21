@@ -303,7 +303,7 @@ fun MorphingDialCanvas(
             val subdialPrimaryTickLength = primaryTickLength * 0.6f
             val handColor = Color(0xFFBB1E2B).copy(alpha = stopwatchSubdialsVisibilityRatio)
             translate(left = -(radius * StopwatchPillWidthRatio / 2 - maxSubdialRadius) * stopwatchSubdialsVisibilityRatio) {
-                drawStopwatchTicks(
+                drawStopwatchHoursTicks(
                     primaryTickLength = subdialPrimaryTickLength * sizeRatio,
                     center = center,
                     maxRadius = maxSubdialRadius,
@@ -422,6 +422,29 @@ private fun DrawScope.drawStopwatchTicks(
     for (i in 0 until 60) {
         val angleDegrees = i * 6f
         val isPrimary = i % 5 == 0
+        val currentTickLength = if (isPrimary) primaryTickLength.toPx() else (primaryTickLength.toPx() * 0.5f)
+        val currentTickAlpha = (if (isPrimary) 1f else 0.5f) * sizeRatio
+
+        rotate(degrees = angleDegrees) {
+            drawLine(
+                color = Color.White.copy(alpha = currentTickAlpha),
+                start = Offset(center.x, center.y - maxRadius),
+                end = Offset(center.x, center.y - maxRadius + currentTickLength),
+                strokeWidth = if (isPrimary) 2.dp.toPx() else 2.dp.toPx()
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawStopwatchHoursTicks(
+    primaryTickLength: Dp,
+    center: Offset,
+    maxRadius: Float,
+    sizeRatio: Float
+) {
+    for (i in 0 until 72) {
+        val angleDegrees = i * 5f
+        val isPrimary = i % 6 == 0
         val currentTickLength = if (isPrimary) primaryTickLength.toPx() else (primaryTickLength.toPx() * 0.5f)
         val currentTickAlpha = (if (isPrimary) 1f else 0.5f) * sizeRatio
 
