@@ -115,77 +115,78 @@ fun MorphingDial(uiState: UiState) {
         }
     }
 
-    val isRunning = (uiState !is UiState.Stopwatch) || (uiState is UiState.Stopwatch.Running)
-    var elapsedTimeMs by remember { mutableLongStateOf(0L) }
+    // Separate time sources so each freezes when its mode is inactive.
+    // This preserves the correct "from" position when a mode transition starts.
+    var clockElapsedMs by remember {
+        mutableLongStateOf(if (uiState is UiState.Clock) uiState.timeMillis else 0L)
+    }
+    var stopwatchElapsedMs by remember {
+        mutableLongStateOf(
+            when (uiState) {
+                is UiState.Stopwatch.Running -> uiState.elapsedMillis
+                is UiState.Stopwatch.Paused -> uiState.elapsedMillis
+                else -> 0L
+            }
+        )
+    }
 
     LaunchedEffect(uiState) {
-        elapsedTimeMs = when (uiState) {
-            is UiState.Clock -> uiState.timeMillis
-            is UiState.Compass -> 0L
-            is UiState.Stopwatch.Running -> uiState.elapsedMillis
-            is UiState.Stopwatch.Paused -> uiState.elapsedMillis
-            is UiState.Stopwatch.Zero -> 0L
+        when (uiState) {
+            is UiState.Clock -> clockElapsedMs = uiState.timeMillis
+            is UiState.Stopwatch.Running -> stopwatchElapsedMs = uiState.elapsedMillis
+            is UiState.Stopwatch.Paused -> stopwatchElapsedMs = uiState.elapsedMillis
+            is UiState.Stopwatch.Zero -> stopwatchElapsedMs = 0L
+            is UiState.Compass -> {}
         }
     }
 
-    val millisInCurrentMinute = elapsedTimeMs % 60_000
-    val millisInCurrentHour = elapsedTimeMs % 3600_000
-    val millisIn12Hour = elapsedTimeMs % 43200_000
-
-    LaunchedEffect(isRunning) {
-        if (isRunning) {
-            var lastFrameTime = withFrameMillis { it }
-
-            while (isActive) {
-                withFrameMillis { currentFrameTime ->
-                    // Calculate the delta (how much time passed since the last frame)
-                    val delta = currentFrameTime - lastFrameTime
-
-                    // Add it to our total elapsed time
-                    elapsedTimeMs += delta
-
-                    // Update lastFrameTime for the next loop iteration
-                    lastFrameTime = currentFrameTime
+    val currentUiState by rememberUpdatedState(uiState)
+    LaunchedEffect(Unit) {
+        var lastFrameTime = withFrameMillis { it }
+        while (isActive) {
+            withFrameMillis { currentFrameTime ->
+                val delta = currentFrameTime - lastFrameTime
+                when (currentUiState) {
+                    is UiState.Clock, is UiState.Compass -> clockElapsedMs += delta
+                    is UiState.Stopwatch.Running -> stopwatchElapsedMs += delta
+                    else -> {}
                 }
+                lastFrameTime = currentFrameTime
             }
         }
     }
-    val secondsHandAngle by transition.animateFloat(label = "SecondsHandAngle") { state ->
-        when (state) {
-            is UiState.Clock -> (millisInCurrentMinute / 60_000f) * 360f
-            is UiState.Compass -> 0f
-            is UiState.Stopwatch -> (millisInCurrentMinute / 60_000f) * 360f
-        }
-    }
-    val minutesHandAngle by transition.animateFloat(label = "MinutesHandAngle") { state ->
-        when (state) {
-            is UiState.Clock -> (millisInCurrentHour / 3600_000f) * 360f
-            is UiState.Compass -> 0f
-            is UiState.Stopwatch -> secondsHandAngle
-        }
-    }
-    val hoursHandAngle by transition.animateFloat(label = "HoursHandAngle") { state ->
-        when (state) {
-            is UiState.Clock -> (millisIn12Hour / 43200_000f) * 360f
-            is UiState.Compass -> 0f
-            is UiState.Stopwatch -> secondsHandAngle
-        }
-    }
 
-    val stopwatchMinutesHandAngle by transition.animateFloat(label = "StopwatchMinutesHandAngle") { state ->
-        when (state) {
-            is UiState.Clock -> 0f
-            is UiState.Compass -> 0f
-            is UiState.Stopwatch -> (millisInCurrentHour / 3600_000f) * 360f
-        }
-    }
-    val stopwatchHoursHandAngle by transition.animateFloat(label = "StopwatchHoursHandAngle") { state ->
-        when (state) {
-            is UiState.Clock -> 0f
-            is UiState.Compass -> 0f
-            is UiState.Stopwatch -> (millisIn12Hour / 43200_000f) * 360f
-        }
-    }
+    // Animated lerp factors for mode transitions (fixed targets, no time-based values)
+    val nonCompassLerp by transition.animateFloat(
+        transitionSpec = { tween(TransitionDurationMs) },
+        label = "NonCompassLerp"
+    ) { state -> if (state is UiState.Compass) 0f else 1f }
+
+    val stopwatchLerp by transition.animateFloat(
+        transitionSpec = { tween(TransitionDurationMs) },
+        label = "StopwatchLerp"
+    ) { state -> if (state is UiState.Stopwatch) 1f else 0f }
+
+    // Clock angles (freeze when not in Clock/Compass mode, preserving position for transitions)
+    val clockSecondsAngle = (clockElapsedMs % 60_000L / 60_000f) * 360f
+    val clockMinutesAngle = (clockElapsedMs % 3_600_000L / 3_600_000f) * 360f
+    val clockHoursAngle = (clockElapsedMs % 43_200_000L / 43_200_000f) * 360f
+
+    // Stopwatch angles (freeze when not in Stopwatch mode, preserving position for transitions)
+    val swSecondsAngle = (stopwatchElapsedMs % 60_000L / 60_000f) * 360f
+    val swMinutesAngle = (stopwatchElapsedMs % 3_600_000L / 3_600_000f) * 360f
+    val swHoursAngle = (stopwatchElapsedMs % 43_200_000L / 43_200_000f) * 360f
+
+    // When Compass↔Stopwatch, both lerps animate simultaneously at the same rate, so their
+    // ratio is always 1 — meaning we only use swSecondsAngle, never clockSecondsAngle.
+    // When Compass↔Clock, stopwatchLerp stays at 0 so ratio is 0 — only clockSecondsAngle.
+    // This prevents clock angles from bleeding into Compass↔Stopwatch transitions.
+    val swRatio = if (nonCompassLerp > 0f) (stopwatchLerp / nonCompassLerp).coerceIn(0f, 1f) else 0f
+    val secondsHandAngle = (clockSecondsAngle + (swSecondsAngle - clockSecondsAngle) * swRatio) * nonCompassLerp
+    val minutesHandAngle = (clockMinutesAngle + (swSecondsAngle - clockMinutesAngle) * swRatio) * nonCompassLerp
+    val hoursHandAngle = (clockHoursAngle + (swSecondsAngle - clockHoursAngle) * swRatio) * nonCompassLerp
+    val stopwatchMinutesHandAngle = swMinutesAngle * stopwatchLerp
+    val stopwatchHoursHandAngle = swHoursAngle * stopwatchLerp
 
     val compassDegrees by transition.animateFloat(label = "CompassDegrees") { state ->
         when (state) {
@@ -435,16 +436,7 @@ private fun DrawScope.drawStopwatchTicks(
     }
 }
 
-//Why this is great for your blog post:
-//If you are writing a tutorial, this is a perfect "Aha!" moment to share with your readers.
-//
-//In the previous drawClockNumbers example, we had to use sin and cos to plot the numbers because standard clock numbers
-// remain strictly upright.
-// But because the compass text rotates to face the center pin, you get to skip the math completely and leverage
-// Compose's rotate(degrees = angle, pivot = center) block. It's highly performant and keeps your drawing logic extremely clean.
-//
-//(Note: I set the text color to Color.Black in this snippet to match the light face of the compass in your image,
-// but you can bind that to your animated state transition just like the alpha!)
+
 private fun DrawScope.drawCompassLabels(
     textMeasurer: TextMeasurer,
     center: Offset,

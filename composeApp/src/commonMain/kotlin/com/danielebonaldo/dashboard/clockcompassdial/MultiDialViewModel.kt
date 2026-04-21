@@ -41,6 +41,12 @@ class MultiDialViewModel : ViewModel() {
         return now.toEpochMilliseconds()
     }
 
+    fun updateClock() {
+        viewModelScope.launch {
+            _clockState.emit(UiState.Clock(nowMillis()))
+        }
+    }
+
     fun startStopWatch() {
         viewModelScope.launch {
             _stopwatchState.emit(
