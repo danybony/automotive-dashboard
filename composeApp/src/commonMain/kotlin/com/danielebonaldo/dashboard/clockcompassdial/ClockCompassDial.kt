@@ -234,7 +234,7 @@ fun MorphingDialCanvas(
     val textMeasurer = rememberTextMeasurer()
     var sizeRatio by remember { mutableFloatStateOf(1f) }
 
-    Canvas(modifier.onGloballyPositioned{
+    Canvas(modifier.onGloballyPositioned {
         sizeRatio = it.size.width / 1144f // to scale the text and the dial when scaling the window
     }) {
         val canvasWidth = size.width
@@ -350,28 +350,27 @@ fun MorphingDialCanvas(
         }
 
         translate(left = center.x, top = center.y) {
-            drawTaperedHand(
+            drawMainHand(
                 angleDegrees = hoursHandAngle,
                 handLength = radius * 0.5f,
-                tailLength = radius * 0.15f,
                 baseWidth = 18.dp.toPx(),
-                handColor = Color.White
+                handColor = Color(0xFFDBDBDB)
             )
 
-            drawTaperedHand(
+            drawMainHand(
                 angleDegrees = minutesHandAngle,
                 handLength = radius * 0.8f,
-                tailLength = radius * 0.15f,
                 baseWidth = 16.dp.toPx(),
-                handColor = Color.White
+                handColor = Color(0xFFDBDBDB)
             )
 
-            drawTaperedHand(
+            drawMainHand(
                 angleDegrees = secondsHandAngle,
-                handLength = radius * 0.95f,
+                handLength = radius * 0.85f,
                 tailLength = radius * 0.2f,
                 baseWidth = 12.dp.toPx(),
-                handColor = Color(0xFFE32636)
+                handColor = Color(0xFFE32636),
+                drawColorTip = false
             )
 
             drawCircle(
@@ -654,39 +653,52 @@ private fun DrawScope.drawStopwatchMinutesNumbers(
     }
 }
 
-private fun DrawScope.drawTaperedHand(
+private fun DrawScope.drawMainHand(
     angleDegrees: Float,
     handLength: Float,
-    tailLength: Float,
     baseWidth: Float,
-    handColor: Color
+    handColor: Color,
+    tailLength: Float = 0f,
+    drawColorTip: Boolean = true
 ) {
-    // 1. Create the Path
     val path = Path().apply {
-        // Start at the very tip of the needle (pointing straight up)
-        moveTo(0f, -handLength)
-
-        // Draw down to the right side of the base
-        lineTo(baseWidth / 2f, 0f)
-
-        // Draw down to the right side of the tail
-        lineTo(baseWidth / 4f, tailLength)
-
-        // Draw across to the left side of the tail
-        lineTo(-baseWidth / 4f, tailLength)
-
-        // Draw up to the left side of the base
-        lineTo(-baseWidth / 2f, 0f)
-
-        // Close the path back to the tip
+        moveTo(-baseWidth / 2f, 0f)
+        lineTo(-baseWidth / 2f, -handLength + baseWidth / 2f)
+        arcTo(
+            rect = Rect(
+                left = -baseWidth / 2f,
+                top = -handLength,
+                right = baseWidth / 2f,
+                bottom = -handLength + baseWidth
+            ),
+            startAngleDegrees = 180f,
+            sweepAngleDegrees = 180f,
+            forceMoveTo = false
+        )
+        lineTo(baseWidth / 2f, tailLength)
+        lineTo(-baseWidth / 2f, tailLength)
         close()
     }
 
-    // 2. Rotate and Draw
     rotate(degrees = angleDegrees, pivot = Offset.Zero) {
         drawPath(
             path = path,
             color = handColor
+        )
+
+        if (drawColorTip) {
+            drawRoundRect(
+                color = Color.Red,
+                topLeft = Offset(-baseWidth / 4f, -handLength + baseWidth / 4),
+                size = Size(baseWidth / 2, handLength / 4),
+                cornerRadius = CornerRadius(baseWidth / 4)
+            )
+        }
+
+        drawCircle(
+            color = handColor,
+            radius = baseWidth * 1.2f,
+            center = Offset.Zero
         )
     }
 }
