@@ -109,9 +109,9 @@ fun MorphingDial(uiState: UiState) {
         label = "TickLength"
     ) { state ->
         when (state) {
-            is UiState.Clock -> 18.dp
-            is UiState.Stopwatch -> 24.dp
-            is UiState.Compass -> 20.dp
+            is UiState.Clock -> 36.dp
+            is UiState.Stopwatch -> 48.dp
+            is UiState.Compass -> 24.dp
         }
     }
 
@@ -265,7 +265,7 @@ fun MorphingDialCanvas(
             cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
         )
 
-        drawOuterTicks(compassDegrees, primaryTickLength * sizeRatio, center)
+        drawOuterTicks(compassDegrees, primaryTickLength.value * sizeRatio, center, sizeRatio)
 
         if (clockTextAlpha > 0f) {
             drawClockNumbers(
@@ -300,11 +300,11 @@ fun MorphingDialCanvas(
 
         if (stopwatchSubdialsVisibilityRatio > 0f) {
             val maxSubdialRadius = radius * StopwatchPillHeightRatio / 2
-            val subdialPrimaryTickLength = primaryTickLength * 0.6f
+            val subdialPrimaryTickLengthPx = primaryTickLength.value * 0.6f * sizeRatio
             val handColor = Color(0xFFBB1E2B).copy(alpha = stopwatchSubdialsVisibilityRatio)
             translate(left = -(radius * StopwatchPillWidthRatio / 2 - maxSubdialRadius) * stopwatchSubdialsVisibilityRatio) {
                 drawStopwatchHoursTicks(
-                    primaryTickLength = subdialPrimaryTickLength * sizeRatio,
+                    primaryTickLength = subdialPrimaryTickLengthPx,
                     center = center,
                     maxRadius = maxSubdialRadius,
                     sizeRatio = stopwatchSubdialsVisibilityRatio * sizeRatio
@@ -320,14 +320,14 @@ fun MorphingDialCanvas(
                     drawStopwatchHand(
                         angleDegrees = stopwatchHoursHandAngle,
                         handLength = maxSubdialRadius * 0.95f,
-                        baseWidth = 4.dp.toPx(),
+                        baseWidth = 8f * sizeRatio,
                         handColor = handColor,
                     )
                 }
             }
             translate(left = +(radius * StopwatchPillWidthRatio / 2 - maxSubdialRadius) * stopwatchSubdialsVisibilityRatio) {
                 drawStopwatchTicks(
-                    primaryTickLength = subdialPrimaryTickLength * sizeRatio,
+                    primaryTickLength = subdialPrimaryTickLengthPx,
                     center = center,
                     maxRadius = maxSubdialRadius,
                     sizeRatio = stopwatchSubdialsVisibilityRatio * sizeRatio
@@ -337,13 +337,13 @@ fun MorphingDialCanvas(
                     center = center,
                     radius = maxSubdialRadius,
                     sizeRatio = sizeRatio,
-                    alpha = stopwatchSubdialsVisibilityRatio * sizeRatio
+                    alpha = stopwatchSubdialsVisibilityRatio
                 )
                 translate(left = center.x, top = center.y) {
                     drawStopwatchHand(
                         angleDegrees = stopwatchMinutesHandAngle,
                         handLength = maxSubdialRadius * 0.95f,
-                        baseWidth = 4.dp.toPx(),
+                        baseWidth = 8f * sizeRatio,
                         handColor = handColor,
                     )
                 }
@@ -354,14 +354,14 @@ fun MorphingDialCanvas(
             drawMainHand(
                 angleDegrees = hoursHandAngle,
                 handLength = radius * 0.5f,
-                baseWidth = 18.dp.toPx(),
+                baseWidth = 36f * sizeRatio,
                 handColor = Color(0xFFDBDBDB)
             )
 
             drawMainHand(
                 angleDegrees = minutesHandAngle,
                 handLength = radius * 0.8f,
-                baseWidth = 16.dp.toPx(),
+                baseWidth = 32f * sizeRatio,
                 handColor = Color(0xFFDBDBDB)
             )
 
@@ -369,21 +369,21 @@ fun MorphingDialCanvas(
                 angleDegrees = secondsHandAngle,
                 handLength = radius * 0.85f,
                 tailLength = radius * 0.2f,
-                baseWidth = 12.dp.toPx(),
+                baseWidth = 24f * sizeRatio,
                 handColor = Color(0xFFE32636),
                 drawColorTip = false
             )
 
             drawCircle(
                 color = Color.Black,
-                radius = 8.dp.toPx(),
+                radius = 16f * sizeRatio,
                 center = Offset(0f, 0f)
             )
             drawCircle(
                 color = Color.LightGray,
-                radius = 8.dp.toPx(),
+                radius = 16f * sizeRatio,
                 center = Offset(0f, 0f),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f * sizeRatio)
             )
         }
     }
@@ -391,30 +391,31 @@ fun MorphingDialCanvas(
 
 private fun DrawScope.drawOuterTicks(
     compassDegrees: Float,
-    primaryTickLength: Dp,
-    center: Offset
+    primaryTickLength: Float,
+    center: Offset,
+    sizeRatio: Float
 ) {
     for (i in 0 until 300) {
         val angleDegrees = i * 1.2f - compassDegrees
         val isPrimary = i % 25 == 0
         val isSecondary = i % 5 == 0
-        val currentTickLength = if (isPrimary) primaryTickLength.toPx()
-        else if (isSecondary) (primaryTickLength.toPx() * 0.7f)
-        else (primaryTickLength.toPx() * 0.4f)
+        val currentTickLength = if (isPrimary) primaryTickLength
+        else if (isSecondary) primaryTickLength * 0.7f
+        else primaryTickLength * 0.4f
 
         rotate(degrees = angleDegrees) {
             drawLine(
                 color = Color.Black,
                 start = Offset(center.x, 0f),
                 end = Offset(center.x, currentTickLength),
-                strokeWidth = if (isPrimary) 4.dp.toPx() else 2.dp.toPx()
+                strokeWidth = if (isPrimary) 8f * sizeRatio else 4f * sizeRatio
             )
         }
     }
 }
 
 private fun DrawScope.drawStopwatchTicks(
-    primaryTickLength: Dp,
+    primaryTickLength: Float,
     center: Offset,
     maxRadius: Float,
     sizeRatio: Float
@@ -422,7 +423,7 @@ private fun DrawScope.drawStopwatchTicks(
     for (i in 0 until 60) {
         val angleDegrees = i * 6f
         val isPrimary = i % 5 == 0
-        val currentTickLength = if (isPrimary) primaryTickLength.toPx() else (primaryTickLength.toPx() * 0.5f)
+        val currentTickLength = if (isPrimary) primaryTickLength else primaryTickLength * 0.5f
         val currentTickAlpha = (if (isPrimary) 1f else 0.5f) * sizeRatio
 
         rotate(degrees = angleDegrees) {
@@ -430,14 +431,14 @@ private fun DrawScope.drawStopwatchTicks(
                 color = Color.White.copy(alpha = currentTickAlpha),
                 start = Offset(center.x, center.y - maxRadius),
                 end = Offset(center.x, center.y - maxRadius + currentTickLength),
-                strokeWidth = if (isPrimary) 2.dp.toPx() else 2.dp.toPx()
+                strokeWidth = 4f * sizeRatio
             )
         }
     }
 }
 
 private fun DrawScope.drawStopwatchHoursTicks(
-    primaryTickLength: Dp,
+    primaryTickLength: Float,
     center: Offset,
     maxRadius: Float,
     sizeRatio: Float
@@ -445,7 +446,7 @@ private fun DrawScope.drawStopwatchHoursTicks(
     for (i in 0 until 72) {
         val angleDegrees = i * 5f
         val isPrimary = i % 6 == 0
-        val currentTickLength = if (isPrimary) primaryTickLength.toPx() else (primaryTickLength.toPx() * 0.5f)
+        val currentTickLength = if (isPrimary) primaryTickLength else primaryTickLength * 0.5f
         val currentTickAlpha = (if (isPrimary) 1f else 0.5f) * sizeRatio
 
         rotate(degrees = angleDegrees) {
@@ -453,7 +454,7 @@ private fun DrawScope.drawStopwatchHoursTicks(
                 color = Color.White.copy(alpha = currentTickAlpha),
                 start = Offset(center.x, center.y - maxRadius),
                 end = Offset(center.x, center.y - maxRadius + currentTickLength),
-                strokeWidth = if (isPrimary) 2.dp.toPx() else 2.dp.toPx()
+                strokeWidth = 4f * sizeRatio
             )
         }
     }
@@ -469,17 +470,17 @@ private fun DrawScope.drawCompassLabels(
     sizeRatio: Float
 ) {
     // Inset the text slightly more than the ticks
-    val textRadius = radius - 50.dp.toPx() * sizeRatio
+    val textRadius = radius - 100f * sizeRatio
 
     // Notice in the image that N, E, S, W are larger than the numbers
     val cardinalStyle = TextStyle(
         color = Color.Black.copy(alpha = alpha),
-        fontSize = 48.sp * sizeRatio,
+        fontSize = (96f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.Bold
     )
     val degreeStyle = TextStyle(
         color = Color.Black.copy(alpha = alpha),
-        fontSize = 22.sp * sizeRatio,
+        fontSize = (48f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.Bold
     )
 
@@ -528,10 +529,10 @@ private fun DrawScope.drawClockNumbers(
     alpha: Float,
     sizeRatio: Float
 ) {
-    val textRadius = radius - 64.dp.toPx() * sizeRatio
+    val textRadius = radius - 130f * sizeRatio
     val textStyle = TextStyle(
         color = Color.White.copy(alpha = alpha),
-        fontSize = 48.sp * sizeRatio,
+        fontSize = (100f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.SemiBold
     )
 
@@ -564,10 +565,10 @@ private fun DrawScope.drawStopwatchSecondsNumbers(
     alpha: Float,
     sizeRatio: Float
 ) {
-    val textRadius = radius - 64.dp.toPx() * sizeRatio
+    val textRadius = radius - 130f * sizeRatio
     val textStyle = TextStyle(
         color = Color.Black.copy(alpha = alpha),
-        fontSize = 48.sp * sizeRatio,
+        fontSize = (100f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.SemiBold
     )
 
@@ -602,10 +603,10 @@ private fun DrawScope.drawStopwatchHoursNumbers(
     alpha: Float,
     sizeRatio: Float
 ) {
-    val textRadius = radius - 32.dp.toPx() * sizeRatio
+    val textRadius = radius - 64f * sizeRatio
     val textStyle = TextStyle(
         color = Color.White.copy(alpha = alpha),
-        fontSize = 24.sp * sizeRatio,
+        fontSize = (48f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.Normal
     )
 
@@ -639,10 +640,10 @@ private fun DrawScope.drawStopwatchMinutesNumbers(
     alpha: Float,
     sizeRatio: Float
 ) {
-    val textRadius = radius - 32.dp.toPx() * sizeRatio
+    val textRadius = radius - 64f * sizeRatio
     val textStyle = TextStyle(
         color = Color.White.copy(alpha = alpha),
-        fontSize = 24.sp * sizeRatio,
+        fontSize = (48f * sizeRatio / density / fontScale).sp,
         fontWeight = FontWeight.Normal
     )
 
