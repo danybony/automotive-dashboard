@@ -772,7 +772,7 @@ private fun MorphingDialClockPreview() {
 @Preview
 @Composable
 private fun MorphingDialStopwatchPreview() {
-    MorphingDial(UiState.Stopwatch.Paused(elapsedMillis = 75_500L))
+    MorphingDial(UiState.Stopwatch.Paused(elapsedMillis = 7_500L))
 }
 
 @Preview

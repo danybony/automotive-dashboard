@@ -17,7 +17,7 @@ import com.danielebonaldo.dashboard.clockcompassdial.MultiDialViewModel
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
+    AutomotiveDashboardTheme {
         val viewModel = viewModel { MultiDialViewModel() }
         var selectedMode by remember { mutableStateOf(DialMode.Clock) }
         val uiState by when (selectedMode) {
@@ -29,7 +29,7 @@ fun App() {
 
         Box(
             Modifier
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
                 .safeContentPadding()
                 .fillMaxSize()
                 .onGloballyPositioned {

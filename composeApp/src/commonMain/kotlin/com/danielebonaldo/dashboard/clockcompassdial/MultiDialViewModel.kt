@@ -35,10 +35,8 @@ class MultiDialViewModel : ViewModel() {
 
 
     private fun nowMillis(): Long {
-        val now = Clock.System.now()
-//        val timeZone = TimeZone.currentSystemDefault()
-//        val localTime = now.toLocalDateTime(timeZone)
-        return now.toEpochMilliseconds()
+        val epochMs = Clock.System.now().toEpochMilliseconds()
+        return epochMs + localTimezoneOffsetMs()
     }
 
     fun updateClock() {
